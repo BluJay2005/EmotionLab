@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Emotion Lab — Juicy Life Problems Edition</title>
+<style>
+  body { background:#121212; color:#eee; font-family:Arial; margin:0; }
+  #game { display:flex; height:100vh; }
+
+  #shelf, #customer { width:30%; background:#1e1e1e; padding:20px; box-sizing:border-box; }
+  #center { flex:1; padding:20px; text-align:center; box-sizing:border-box; }
+
+  h2 { margin-top:0; }
+
+  .emotion {
+    width:80px; height:80px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    margin:10px; cursor:grab; font-weight:bold; font-size:14px;
+  }
+  #joy { background:#ffd54f; }
+  #anger { background:#e53935; }
+  #fear { background:#8e24aa; color:#fff; }
+  #sadness { background:#42a5f5; }
+  #calm { background:#66bb6a; }
+
+  #bowl {
+    width:240px; height:240px; border-radius:50%;
+    background:#333; border:4px solid #555;
+    margin:auto; padding-top:20px; box-sizing:border-box;
+  }
+
+  #bowlList { margin-top:10px; font-size:14px; }
+
+  #face { width:80px; height:80px; border-radius:50%; background:#555; margin-bottom:10px; }
+
+  #moodBar { width:100%; height:20px; background:#333; border-radius:10px; margin-bottom:10px; }
+  #moodFill { height:100%; width:50%; background:#4caf50; border-radius:10px; }
+
+  #log { margin-top:20px; height:220px; overflow-y:auto; background:#0005; padding:10px; border-radius:5px; font-size:14px; }
+  .log-entry { border-bottom:1px solid #333; padding:4px 0; }
+
+  button {
+    background:#4caf50; border:none; padding:10px 15px;
+    margin:10px 0; border-radius:5px; cursor:pointer; color:white;
+    font-size:14px;
+  }
+  button:disabled { background:#555; cursor:default; }
+</style>
+</head>
+<body>
+
+<div id="game">
+
+  <!-- Emotion Shelf -->
+  <div id="shelf">
+    <h2>Emotions</h2>
+    <div id="joy" class="emotion" draggable="true">Joy</div>
+    <div id="anger" class="emotion" draggable="true">Anger</div>
+    <div id="fear" class="emotion" draggable="true">Fear</div>
+    <div id="sadness" class="emotion" draggable="true">Sadness</div>
+    <div id="calm" class="emotion" draggable="true">Calm</div>
+  </div>
+
+  <!-- Mix Bowl -->
+  <div id="center">
+    <h2>Mix Bowl</h2>
+    <div id="bowl">Drop Emotions Here</div>
+    <div id="bowlList">Empty</div>
+
+    <p><strong>Current Potion:</strong> <span id="mixResult">None</span></p>
+    <button id="deliverBtn">Give Potion</button>
+  </div>
+
+  <!-- Customer -->
+  <div id="customer">
+    <h2>Customer</h2>
+    <div id="face"></div>
+    <div id="moodBar"><div id="moodFill"></div></div>
+
+    <p><strong>Personality:</strong> <span id="personalityLabel">None</span></p>
+    <p><strong>Problem:</strong> <span id="problem">None</span></p>
+    <button id="newCustomer">New Customer</button>
+
+    <div id="log"></div>
+  </div>
+
+</div>
+
+<script>
+// Emotion combos → potions
+const combos = {
+  "joy+anger": "righteous fury",
+  "joy+fear": "nervous excitement",
+  "anger+fear": "panic",
+  "sadness+calm": "melancholy",
+  "fear+calm": "unease",
+  "joy+calm": "contentment",
+  "anger+calm": "controlled aggression",
+  "sadness+fear": "hopeless dread",
+  "joy+sadness": "bittersweet"
+};
+
+let bowlContents = [];
+let currentMix = null;
+let customerProblem = null;
+let customerPersonality = null;
+let mood = 50;
+
+// ---------- LOG ----------
+function log(msg) {
+  const entry = document.createElement("div");
+  entry.className = "log-entry";
+  entry.textContent = msg;
+  document.getElementById("log").prepend(entry);
+}
+
+// ---------- DRAG & DROP ----------
+document.querySelectorAll(".emotion").forEach(e => {
+  e.addEventListener("dragstart", ev => {
+    ev.dataTransfer.setData("emotion", ev.target.id);
+  });
+});
+
+const bowl = document.getElementById("bowl");
+
+bowl.addEventListener("dragover", ev => ev.preventDefault());
+
+bowl.addEventListener("drop", ev => {
+  const emotion = ev.dataTransfer.getData("emotion");
+  if (!emotion) return;
+
+  bowlContents.push(emotion);
+  document.getElementById("bowlList").textContent = bowlContents.join(", ");
+
+  if (bowlContents.length === 2) {
+    const a = bowlContents[0];
+    const b = bowlContents[1];
+
+    const key1 = a + "+" + b;
+    const key2 = b + "+" + a;
+
+    currentMix = combos[key1] || combos[key2] || "unstable compound";
+    document.getElementById("mixResult").textContent = currentMix;
+
+    log(`Mixed ${a} + ${b} → ${currentMix}`);
+
+    bowlContents = [];
+    document.getElementById("bowlList").textContent = "Empty";
+  }
+});
+
+// ---------- PROCEDURAL PROBLEM GENERATOR ----------
+const problemTemplates = [
+  "{person} did {badThing} and now I feel {emotion}.",
+  "I'm stuck between {choiceA} and {choiceB}.",
+  "I want to {action} but I'm scared it'll lead to {fearOutcome}.",
+  "Someone I care about is acting {adjective} and I don't know why.",
+  "{person} keeps crossing my boundaries and I'm not sure if I should {choiceA} or {choiceB}."
+];
+
+const problemParts = {
+  person: ["my ex", "my boss", "my best friend", "my situationship", "my partner", "my roommate"],
+  badThing: ["lied to me", "blocked me", "embarrassed me", "ignored me", "stole from me", "flirted with someone else"],
+  emotion: ["furious", "heartbroken", "jealous", "confused", "numb", "petty"],
+  choiceA: ["stay", "leave", "confront them", "ghost them", "forgive them", "start drama"],
+  choiceB: ["move on", "cut them off", "pretend nothing happened", "keep quiet", "double text"],
+  action: ["confess", "break up", "call them out", "apologize", "walk away", "start an argument"],
+  fearOutcome: ["a huge fight", "losing them", "looking stupid", "regretting it", "making things worse", "everyone finding out"],
+  adjective: ["distant", "weird", "secretive", "cold", "too friendly", "hot and cold"]
+};
+
+function generateProblem() {
+  const template = problemTemplates[Math.floor(Math.random() * problemTemplates.length)];
+  return template.replace(/\{(\w+)\}/g, (_, key) => {
+    const list = problemParts[key];
+    return list[Math.floor(Math.random() * list.length)];
+  });
+}
+
+// ---------- PERSONALITY SYSTEM ----------
+const personalities = [
+  { type: "volatile", modifiers: { anger: +20, fear: +10 }, flavor: "Quick to react, bad at holding back." },
+  { type: "anxious", modifiers: { fear: +25, calm: +10 }, flavor: "Overthinks everything, avoids conflict." },
+  { type: "romantic", modifiers: { joy: +15, sadness: +10 }, flavor: "Feels everything deeply, especially love stuff." },
+  { type: "stoic", modifiers: { calm: +20, anger: -10 }, flavor: "Keeps it together, rarely explodes." },
+  { type: "dramatic", modifiers: { sadness: +20, joy: +10 }, flavor: "Lives for emotional plot twists." }
+];
+
+function generatePersonality() {
+  return personalities[Math.floor(Math.random() * personalities.length)];
+}
+
+// ---------- OUTCOME STORY SYSTEM ----------
+const outcomeEvents = {
+  "controlled aggression": [
+    "They take a deep breath and approach {person}.",
+    "They speak calmly but firmly about {issue}.",
+    "The conversation gets tense, but they hold their ground.",
+    "They walk away feeling {result}."
+  ],
+  "panic": [
+    "Their heart races as they imagine the worst.",
+    "They avoid {person} entirely.",
+    "They send a frantic message they immediately regret.",
+    "They end the day feeling {result}."
+  ],
+  "bittersweet": [
+    "They think about {memory}.",
+    "Tears come, but they keep going.",
+    "They write a long message they never send.",
+    "They end up feeling {result}."
+  ],
+  "contentment": [
+    "They sit with their feelings instead of running from them.",
+    "They decide not to start drama today.",
+    "They set a small boundary and stick to it.",
+    "They feel {result} about the whole situation."
+  ],
+  "righteous fury": [
+    "They storm toward {person} with all their emotions blazing.",
+    "They lay out every detail of {issue} without holding back.",
+    "Voices get raised, but they finally say what they needed to say.",
+    "They leave feeling {result}, even if things are messy."
+  ],
+  "melancholy": [
+    "They replay {memory} in their head over and over.",
+    "They type out a long message explaining how they feel.",
+    "They hesitate before sending, but hit send anyway.",
+    "They feel {result} as they wait for a reply."
+  ],
+  "unease": [
+    "They start noticing every tiny thing {person} does.",
+    "They assume the worst about every delayed reply.",
+    "They stalk social media for clues.",
+    "They end up feeling {result} and even more confused."
+  ],
+  "hopeless dread": [
+    "They convince themselves this situation can only end badly.",
+    "They spiral through every worst-case scenario.",
+    "They push {person} away before anything actually happens.",
+    "They feel {result}, but at least they think they're 'protecting' themselves."
+  ],
+  "nervous excitement": [
+    "Their heart races, but in a good way.",
+    "They decide to take a risky emotional step.",
+    "They send a bold message or show up unannounced.",
+    "They feel {result}, unsure if it was genius or chaos."
+  ],
+  "unstable compound": [
+    "The potion surges with chaotic energy.",
+    "Their emotions spike in every direction at once.",
+    "They say things they absolutely shouldn't have said.",
+    "Everything ends feeling {result} and way more complicated."
+  ]
+};
+
+const storyParts = {
+  person: ["their ex", "their boss", "their friend", "their crush", "their partner", "their roommate"],
+  issue: ["the betrayal", "the argument", "the mixed signals", "the tension", "the boundary crossing"],
+  memory: ["the good times", "the breakup", "the first date", "the fight", "the last call"],
+  result: ["lighter", "worse", "uncertain", "strangely hopeful", "emotionally drained", "weirdly empowered"]
+};
+
+function generateOutcomeStory(potion) {
+  const events = outcomeEvents[potion] || ["The potion causes unpredictable chaos."];
+  return events.map(e =>
+    e.replace(/\{(\w+)\}/g, (_, key) => {
+      const list = storyParts[key];
+      return list[Math.floor(Math.random() * list.length)];
+    })
+  );
+}
+
+// ---------- CHAOS EVENTS ----------
+const chaosEvents = [
+  "A stray emotion leaks from the bowl and hits a random customer.",
+  "Someone overhears the confrontation and jumps in with their own drama.",
+  "The shop's atmosphere shifts—everyone gets a little more unstable.",
+  "The potion amplifies a hidden feeling they didn't know they had."
+];
+
+function maybeChaos() {
+  if (Math.random() < 0.25) {
+    const event = chaosEvents[Math.floor(Math.random() * chaosEvents.length)];
+    log("⚠️ Chaos Event: " + event);
+    mood -= 10;
+    updateMood();
+  }
+}
+
+// ---------- MOOD + FACE ----------
+function updateMood() {
+  mood = Math.max(0, Math.min(100, mood));
+  document.getElementById("moodFill").style.width = mood + "%";
+
+  const face = document.getElementById("face");
+  if (mood > 70) face.style.background = "#4caf50";      // happy
+  else if (mood > 30) face.style.background = "#ffc107"; // mixed
+  else face.style.background = "#e53935";                // upset
+}
+
+// ---------- CUSTOMER SYSTEM ----------
+document.getElementById("newCustomer").onclick = () => {
+  customerProblem = generateProblem();
+  customerPersonality = generatePersonality();
+  document.getElementById("problem").textContent = customerProblem;
+  document.getElementById("personalityLabel").textContent =
+    `${customerPersonality.type} — ${customerPersonality.flavor}`;
+
+  mood = 50;
+  updateMood();
+  log(`New customer (${customerPersonality.type}): "${customerProblem}"`);
+};
+
+document.getElementById("deliverBtn").onclick = () => {
+  if (!currentMix || !customerProblem || !customerPersonality) return;
+
+  log(`Potion delivered: ${currentMix}`);
+
+  // Base mood delta with some randomness
+  let delta = Math.floor(Math.random() * 40) - 10; // -10 to +29
+
+  // Personality influence based on potion type (rough mapping)
+  const emotionInfluence = {
+    "righteous fury": "anger",
+    "panic": "fear",
+    "nervous excitement": "fear",
+    "melancholy": "sadness",
+    "unease": "fear",
+    "contentment": "calm",
+    "controlled aggression": "anger",
+    "hopeless dread": "sadness",
+    "bittersweet": "sadness",
+    "unstable compound": "anger"
+  };
+
+  const key = emotionInfluence[currentMix];
+  if (key && customerPersonality.modifiers[key]) {
+    delta += customerPersonality.modifiers[key];
+  }
+
+  if (currentMix === "unstable compound") {
+    delta -= 40; // hard hit
+  }
+
+  mood += delta;
+  updateMood();
+
+  // Generate story
+  const storyLines = generateOutcomeStory(currentMix);
+  storyLines.forEach(line => log(line));
+
+  // Chaos chance
+  maybeChaos();
+
+  currentMix = null;
+  document.getElementById("mixResult").textContent = "None";
+};
+
+updateMood();
+</script>
+
+</body>
+</html>
