@@ -4,47 +4,64 @@
 <meta charset="UTF-8">
 <title>Emotion Lab — Juicy Life Problems Edition</title>
 <style>
-  body { background:#121212; color:#eee; font-family:Arial; margin:0; }
+  body { background:#121212; color:#eee; font-family:Arial, sans-serif; margin:0; overflow:hidden; }
   #game { display:flex; height:100vh; }
 
-  #shelf, #customer { width:30%; background:#1e1e1e; padding:20px; box-sizing:border-box; }
-  #center { flex:1; padding:20px; text-align:center; box-sizing:border-box; }
+  #shelf, #customer { width:30%; background:#1e1e1e; padding:20px; box-sizing:border-box; display:flex; flex-direction:column; }
+  #center { flex:1; padding:20px; text-align:center; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; }
 
-  h2 { margin-top:0; }
+  h2 { margin-top:0; color:#ffeb3b; font-size: 20px; }
 
+  .stats { display: flex; justify-content: space-between; background: #252525; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 14px; border: 1px solid #333; }
+  .stats span { color: #4caf50; }
+
+  .emotion-shelf { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
   .emotion {
-    width:80px; height:80px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    margin:10px; cursor:grab; font-weight:bold; font-size:14px;
+    width: 75px; height: 75px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: grab; font-weight: bold; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    user-select: none;
   }
-  #joy { background:#ffd54f; }
-  #anger { background:#e53935; }
+  .emotion:hover { transform: scale(1.08); box-shadow: 0 0 12px rgba(255,255,255,0.3); }
+  .emotion:active { cursor: grabbing; }
+
+  #joy { background:#ffd54f; color: #333; }
+  #anger { background:#e53935; color: #fff; }
   #fear { background:#8e24aa; color:#fff; }
-  #sadness { background:#42a5f5; }
-  #calm { background:#66bb6a; }
+  #sadness { background:#42a5f5; color: #fff; }
+  #calm { background:#66bb6a; color: #fff; }
 
   #bowl {
-    width:240px; height:240px; border-radius:50%;
-    background:#333; border:4px solid #555;
-    margin:auto; padding-top:20px; box-sizing:border-box;
+    width:220px; height:220px; border-radius:50%;
+    background:#262626; border:4px dashed #555;
+    margin: 10px auto; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; box-sizing:border-box; transition: all 0.3s;
   }
+  #bowl.drag-over { border-color: #ffeb3b; background: #333; }
 
-  #bowlList { margin-top:10px; font-size:14px; }
+  #bowlList { margin: 10px 0; font-size: 14px; color: #aaa; font-style: italic; }
 
-  #face { width:80px; height:80px; border-radius:50%; background:#555; margin-bottom:10px; }
+  #face { width:70px; height:70px; border-radius:50%; background:#555; margin:0 auto 10px auto; border: 2px solid #777; transition: background 0.3s; }
 
-  #moodBar { width:100%; height:20px; background:#333; border-radius:10px; margin-bottom:10px; }
-  #moodFill { height:100%; width:50%; background:#4caf50; border-radius:10px; }
+  #moodBar { width:100%; height:18px; background:#333; border-radius:9px; margin-bottom:15px; overflow:hidden; }
+  #moodFill { height:100%; width:50%; background:#4caf50; border-radius:9px; transition: width 0.4s; }
 
-  #log { margin-top:20px; height:220px; overflow-y:auto; background:#0005; padding:10px; border-radius:5px; font-size:14px; }
-  .log-entry { border-bottom:1px solid #333; padding:4px 0; }
+  #log { margin-top:auto; height:180px; overflow-y:auto; background:#121212; padding:10px; border-radius:5px; font-size:13px; border: 1px solid #333; text-align: left; }
+  .log-entry { border-bottom:1px solid #222; padding:8px 0; line-height: 1.4; }
 
   button {
     background:#4caf50; border:none; padding:10px 15px;
-    margin:10px 0; border-radius:5px; cursor:pointer; color:white;
-    font-size:14px;
+    margin:6px 0; border-radius:5px; cursor:pointer; color:white;
+    font-size:14px; font-weight: bold; transition: background 0.2s;
   }
-  button:disabled { background:#555; cursor:default; }
+  button:hover { background: #43a047; }
+  button:disabled { background:#444; color: #777; cursor:default; }
+  
+  .secondary-btn { background: #e53935; }
+  .secondary-btn:hover { background: #d32f2f; }
+
+  .problem-box { background: #252525; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ffeb3b; font-size: 13px; line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -53,33 +70,45 @@
 
   <!-- Emotion Shelf -->
   <div id="shelf">
-    <h2>Emotions</h2>
-    <div id="joy" class="emotion" draggable="true">Joy</div>
-    <div id="anger" class="emotion" draggable="true">Anger</div>
-    <div id="fear" class="emotion" draggable="true">Fear</div>
-    <div id="sadness" class="emotion" draggable="true">Sadness</div>
-    <div id="calm" class="emotion" draggable="true">Calm</div>
+    <h2>🧪 Emotion Shelf</h2>
+    <p style="font-size: 12px; color: #aaa; margin-bottom: 15px;">Drag two emotions into the mix bowl to craft a potent life potion.</p>
+    <div class="emotion-shelf">
+      <div id="joy" class="emotion" draggable="true">Joy</div>
+      <div id="anger" class="emotion" draggable="true">Anger</div>
+      <div id="fear" class="emotion" draggable="true">Fear</div>
+      <div id="sadness" class="emotion" draggable="true">Sadness</div>
+      <div id="calm" class="emotion" draggable="true">Calm</div>
+    </div>
   </div>
 
   <!-- Mix Bowl -->
   <div id="center">
-    <h2>Mix Bowl</h2>
+    <h2>🥣 Mix Bowl</h2>
     <div id="bowl">Drop Emotions Here</div>
     <div id="bowlList">Empty</div>
+    <button id="clearBowl" class="secondary-btn" style="padding: 6px 12px; font-size: 12px;">Clear Bowl</button>
 
-    <p><strong>Current Potion:</strong> <span id="mixResult">None</span></p>
-    <button id="deliverBtn">Give Potion</button>
+    <p style="margin: 15px 0 5px 0;"><strong>Current Potion:</strong> <span id="mixResult" style="color: #ffeb3b;">None</span></p>
+    <button id="deliverBtn" disabled>Give Potion to Customer</button>
   </div>
 
   <!-- Customer -->
   <div id="customer">
-    <h2>Customer</h2>
+    <div class="stats">
+      <div>Coins: <span id="coinCount">50</span> 🪙</div>
+      <div>Satisfied: <span id="scoreCount">0</span> ✨</div>
+    </div>
+
+    <h2>👤 Customer Desk</h2>
     <div id="face"></div>
     <div id="moodBar"><div id="moodFill"></div></div>
 
-    <p><strong>Personality:</strong> <span id="personalityLabel">None</span></p>
-    <p><strong>Problem:</strong> <span id="problem">None</span></p>
-    <button id="newCustomer">New Customer</button>
+    <div class="problem-box">
+      <p style="margin:0 0 5px 0;"><strong>Vibe:</strong> <span id="personalityLabel">None</span></p>
+      <p style="margin:0;"><strong>Dilemma:</strong> <span id="problem">None</span></p>
+    </div>
+
+    <button id="newCustomer">Next Customer</button>
 
     <div id="log"></div>
   </div>
@@ -105,13 +134,21 @@ let currentMix = null;
 let customerProblem = null;
 let customerPersonality = null;
 let mood = 50;
+let coins = 50;
+let score = 0;
 
 // ---------- LOG ----------
 function log(msg) {
   const entry = document.createElement("div");
   entry.className = "log-entry";
-  entry.textContent = msg;
+  entry.innerHTML = msg;
   document.getElementById("log").prepend(entry);
+}
+
+// ---------- UPDATE STATS ----------
+function updateStatsUI() {
+  document.getElementById("coinCount").textContent = coins;
+  document.getElementById("scoreCount").textContent = score;
 }
 
 // ---------- DRAG & DROP ----------
@@ -123,31 +160,50 @@ document.querySelectorAll(".emotion").forEach(e => {
 
 const bowl = document.getElementById("bowl");
 
-bowl.addEventListener("dragover", ev => ev.preventDefault());
+bowl.addEventListener("dragover", ev => {
+  ev.preventDefault();
+  bowl.classList.add("drag-over");
+});
+
+bowl.addEventListener("dragleave", () => {
+  bowl.classList.remove("drag-over");
+});
 
 bowl.addEventListener("drop", ev => {
+  ev.preventDefault();
+  bowl.classList.remove("drag-over");
+  
+  if (bowlContents.length >= 2) return;
+
   const emotion = ev.dataTransfer.getData("emotion");
   if (!emotion) return;
 
-  bowlContents.push(emotion);
-  document.getElementById("bowlList").textContent = bowlContents.join(", ");
+  bowlContents.push(emotion.charAt(0).toUpperCase() + emotion.slice(1));
+  document.getElementById("bowlList").textContent = bowlContents.join(" + ");
 
   if (bowlContents.length === 2) {
-    const a = bowlContents[0];
-    const b = bowlContents[1];
+    const a = bowlContents[0].toLowerCase();
+    const b = bowlContents[1].toLowerCase();
 
     const key1 = a + "+" + b;
     const key2 = b + "+" + a;
 
     currentMix = combos[key1] || combos[key2] || "unstable compound";
     document.getElementById("mixResult").textContent = currentMix;
+    document.getElementById("deliverBtn").disabled = false;
 
-    log(`Mixed ${a} + ${b} → ${currentMix}`);
-
-    bowlContents = [];
-    document.getElementById("bowlList").textContent = "Empty";
+    log(`✨ Crafted potion: <b>${currentMix}</b>`);
   }
 });
+
+// Clear bowl handler
+document.getElementById("clearBowl").onclick = () => {
+  bowlContents = [];
+  currentMix = null;
+  document.getElementById("bowlList").textContent = "Empty";
+  document.getElementById("mixResult").textContent = "None";
+  document.getElementById("deliverBtn").disabled = true;
+};
 
 // ---------- PROCEDURAL PROBLEM GENERATOR ----------
 const problemTemplates = [
@@ -190,67 +246,37 @@ function generatePersonality() {
   return personalities[Math.floor(Math.random() * personalities.length)];
 }
 
-// ---------- OUTCOME STORY SYSTEM ----------
-const outcomeEvents = {
+// ---------- NARRATIVE OUTCOME SYSTEM ----------
+const outcomeTemplates = {
   "controlled aggression": [
-    "They take a deep breath and approach {person}.",
-    "They speak calmly but firmly about {issue}.",
-    "The conversation gets tense, but they hold their ground.",
-    "They walk away feeling {result}."
+    "They take a deep breath, steel themselves, and approach {person} to speak calmly but firmly about {issue}. Though the conversation gets tense, they hold their ground and walk away feeling {result}."
   ],
   "panic": [
-    "Their heart races as they imagine the worst.",
-    "They avoid {person} entirely.",
-    "They send a frantic message they immediately regret.",
-    "They end the day feeling {result}."
+    "Their heart races as worst-case scenarios take over. They entirely avoid {person} and frantically fire off a message they immediately regret, ending the day feeling {result}."
   ],
   "bittersweet": [
-    "They think about {memory}.",
-    "Tears come, but they keep going.",
-    "They write a long message they never send.",
-    "They end up feeling {result}."
+    "They find themselves drifting back to thoughts of {memory}. Tears well up, but they keep pushing forward, eventually writing a long message they decide never to send and feeling {result}."
   ],
   "contentment": [
-    "They sit with their feelings instead of running from them.",
-    "They decide not to start drama today.",
-    "They set a small boundary and stick to it.",
-    "They feel {result} about the whole situation."
+    "Instead of running from their feelings, they sit with them and consciously choose not to start any drama today. They set a small, healthy boundary and stick to it, feeling {result} about the whole situation."
   ],
   "righteous fury": [
-    "They storm toward {person} with all their emotions blazing.",
-    "They lay out every detail of {issue} without holding back.",
-    "Voices get raised, but they finally say what they needed to say.",
-    "They leave feeling {result}, even if things are messy."
+    "Fueled by a sudden surge of adrenaline, they storm straight toward {person} with all their emotions blazing. They lay out every detail of {issue} without holding back, leaving the scene feeling {result}."
   ],
   "melancholy": [
-    "They replay {memory} in their head over and over.",
-    "They type out a long message explaining how they feel.",
-    "They hesitate before sending, but hit send anyway.",
-    "They feel {result} as they wait for a reply."
+    "They loop memories of {memory} over and over in their mind, typing out a long explanation of how they feel. After hesitating, they hit send anyway, feeling {result} as they wait for a reply."
   ],
   "unease": [
-    "They start noticing every tiny thing {person} does.",
-    "They assume the worst about every delayed reply.",
-    "They stalk social media for clues.",
-    "They end up feeling {result} and even more confused."
+    "They start second-guessing every tiny thing {person} does, assuming the worst about every delayed reply and stalking social media for hidden clues, leaving them feeling {result} and completely confused."
   ],
   "hopeless dread": [
-    "They convince themselves this situation can only end badly.",
-    "They spiral through every worst-case scenario.",
-    "They push {person} away before anything actually happens.",
-    "They feel {result}, but at least they think they're 'protecting' themselves."
+    "They convince themselves this entire situation can only end in complete disaster, spiraling through worst-case scenarios and pushing {person} away before anything can actually happen, feeling {result}."
   ],
   "nervous excitement": [
-    "Their heart races, but in a good way.",
-    "They decide to take a risky emotional step.",
-    "They send a bold message or show up unannounced.",
-    "They feel {result}, unsure if it was genius or chaos."
+    "Their heart races, but this time with a thrilling edge. They decide to take a risky emotional leap, sending a bold message and feeling {result}, unsure if it was a genius move or utter chaos."
   ],
   "unstable compound": [
-    "The potion surges with chaotic energy.",
-    "Their emotions spike in every direction at once.",
-    "They say things they absolutely shouldn't have said.",
-    "Everything ends feeling {result} and way more complicated."
+    "The volatile potion reacts violently, causing their emotions to spike in every direction at once. They say things they absolutely shouldn't have said, leaving everything feeling {result} and vastly more complicated."
   ]
 };
 
@@ -262,13 +288,13 @@ const storyParts = {
 };
 
 function generateOutcomeStory(potion) {
-  const events = outcomeEvents[potion] || ["The potion causes unpredictable chaos."];
-  return events.map(e =>
-    e.replace(/\{(\w+)\}/g, (_, key) => {
-      const list = storyParts[key];
-      return list[Math.floor(Math.random() * list.length)];
-    })
-  );
+  const templates = outcomeTemplates[potion] || ["The potion causes unpredictable chaos, leaving them feeling {result}."];
+  const template = templates[Math.floor(Math.random() * templates.length)];
+  
+  return template.replace(/\{(\w+)\}/g, (_, key) => {
+    const list = storyParts[key];
+    return list[Math.floor(Math.random() * list.length)];
+  });
 }
 
 // ---------- CHAOS EVENTS ----------
@@ -282,7 +308,7 @@ const chaosEvents = [
 function maybeChaos() {
   if (Math.random() < 0.25) {
     const event = chaosEvents[Math.floor(Math.random() * chaosEvents.length)];
-    log("⚠️ Chaos Event: " + event);
+    log(`⚠️ <b>Chaos Event:</b> ${event}`);
     mood -= 10;
     updateMood();
   }
@@ -300,27 +326,35 @@ function updateMood() {
 }
 
 // ---------- CUSTOMER SYSTEM ----------
-document.getElementById("newCustomer").onclick = () => {
+function loadNewCustomer() {
+  // Clear the previous customer's log history entirely
+  document.getElementById("log").innerHTML = "";
+
   customerProblem = generateProblem();
   customerPersonality = generatePersonality();
   document.getElementById("problem").textContent = customerProblem;
   document.getElementById("personalityLabel").textContent =
-    `${customerPersonality.type} — ${customerPersonality.flavor}`;
+    `${customerPersonality.type.toUpperCase()} — ${customerPersonality.flavor}`;
 
   mood = 50;
   updateMood();
-  log(`New customer (${customerPersonality.type}): "${customerProblem}"`);
+  log(`🚪 <b>New customer arrived (${customerPersonality.type}):</b> "${customerProblem}"`);
+}
+
+document.getElementById("newCustomer").onclick = () => {
+  loadNewCustomer();
 };
 
 document.getElementById("deliverBtn").onclick = () => {
   if (!currentMix || !customerProblem || !customerPersonality) return;
 
-  log(`Potion delivered: ${currentMix}`);
+  // 1. Generate the narrative paragraph
+  const storyParagraph = generateOutcomeStory(currentMix);
+  log(`🧪 <b>Delivered ${currentMix}:</b> ${storyParagraph}`);
 
-  // Base mood delta with some randomness
-  let delta = Math.floor(Math.random() * 40) - 10; // -10 to +29
+  // Calculate mood shift
+  let delta = Math.floor(Math.random() * 40) - 10;
 
-  // Personality influence based on potion type (rough mapping)
   const emotionInfluence = {
     "righteous fury": "anger",
     "panic": "fear",
@@ -340,24 +374,46 @@ document.getElementById("deliverBtn").onclick = () => {
   }
 
   if (currentMix === "unstable compound") {
-    delta -= 40; // hard hit
+    delta -= 40;
   }
 
   mood += delta;
   updateMood();
 
-  // Generate story
-  const storyLines = generateOutcomeStory(currentMix);
-  storyLines.forEach(line => log(line));
+  // 2. Customer reaction & reward based on final mood
+  if (mood >= 70) {
+    coins += 25;
+    score += 1;
+    log("🎉 <b>Customer Reaction:</b> They feel remarkably better and leave completely satisfied! (+25 coins)");
+  } else if (mood <= 20) {
+    coins = Math.max(0, coins - 10);
+    log("💢 <b>Customer Reaction:</b> The potion backfired horribly; they storm off furious! (-10 coins)");
+  } else {
+    coins += 10;
+    log("😐 <b>Customer Reaction:</b> Their situation is a mixed bag, but they handle it okay. (+10 coins)");
+  }
+  updateStatsUI();
 
-  // Chaos chance
+  // Chaos check
   maybeChaos();
 
+  // Reset mix state
+  bowlContents = [];
   currentMix = null;
+  document.getElementById("bowlList").textContent = "Empty";
   document.getElementById("mixResult").textContent = "None";
+  document.getElementById("deliverBtn").disabled = true;
+
+  // Queue next customer after delay
+  setTimeout(() => {
+    loadNewCustomer();
+  }, 5000);
 };
 
+// Initialize game on load
 updateMood();
+updateStatsUI();
+loadNewCustomer();
 </script>
 
 </body>
